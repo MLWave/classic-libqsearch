@@ -1,5 +1,6 @@
 bin_PROGRAMS=maketree improvetree qsearch-config
 
+ACLOCAL_AMFLAGS = -I m4
 GLOBCPPFLAGS= -I@abs_srcdir@ -I@abs_srcdir@/qsearch
 
 if USING_GOMP

@@ -2,6 +2,7 @@
 cflags_save="$CFLAGS"
 AC_INIT(libqsearch,1.0.8,cilibrar@cilibrar.com)
 AC_CONFIG_SRCDIR(src/qsearch-tree.c)
+AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE
 AC_CANONICAL_HOST
 AC_PROG_LIBTOOL
