@@ -1,0 +1,12 @@
+prefix=@prefix@
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include/qsearch-1.0
+
+Name: qsearch
+Description: QSearch Machine Learning Library
+Requires: complearn glib-2.0 gsl
+Version: @VERSION@
+Libs: -L${exec_prefix}/lib -lqsearch@GOMPSTR@ @GOMPFLAGS@
+Libs.private: @PRIVATELIBS@
+Cflags: -I${includedir} @EXTCFLAGS@ @EXTCPPFLAGS@ @GOMPFLAGS@

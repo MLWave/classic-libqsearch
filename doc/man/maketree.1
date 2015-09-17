@@ -1,0 +1,63 @@
+.TH MAKETREE 1
+.SH NAME
+maketree \- perform Quartet Tree Reconstruction on a distance matrix to produce
+a binary tree
+.SH SYNOPSIS
+.B maketree [-n] [-o filename]
+.I distmatrix.clb
+.SH DESCRIPTION
+.B maketree
+tries to find an optimal tree to represent an input distance matrix \fBmatrix.txt\fR.
+It uses the Minimum Cost Quartet Tree Reconstruction method.  The program
+starts with a random tree, and continues to try small modifications to improve
+the tree score.  Eventually, the tree will stop easily improving.  The
+algorithm will write the best tree it found to \fBtreefile.dot\fR.  It will
+also write all "better" trees that it finds along the way to the final
+tree at the end so that it is safe to stop early with an interrupt.  The
+output format can be Nexus or .dot (Graphviz) format.  The default is
+graphviz.
+
+To start maketree you must have a distance matrix file.  Three input formats
+are supported for distance matrixes: text format, complearn binary
+format (.clb), or Nexus format (.nex).  The filename for the distance matrix
+must be given as an argument.
+
+The following configuration variables are relevant to this command:
+
+.TP
+\fBself_agreement_termination\fR: bool
+Whether or not to insist \fIk\fR number of trees must reach an agreed score
+before the program exits. Default yes.
+
+.TP
+\fBmax_fail_count\fR: int
+An integer specifying how many failed batches of trees must occur in succession
+before the program exits.  Only used when self_agreement_termination is off.
+Default 100000.
+
+.PP
+Input files for this program can be created using the \fBncd (1)\fR command.
+.PP
+For more information on the details of this algorithm, please see
+\fIAlgorithmic Clustering of Music\fR by \fBCilibrasi, Vitanyi,\fR and \fBde Wolf\fR at \fBhttp://www.arxiv.org/abs/cs.SD/0303025\fR
+.SH OPTIONS
+.TP
+\fB\-o\fR filename, \fB\-\-output=FILE\fR
+change the default output filename to something other than treefile.dot
+.TP
+\fB\-n\fR, \fB\-\-nexus\fR
+Nexus output format for tree
+.TP
+.SH FILES
+.I $HOME/.complearn/complearn.conf
+.RS
+per-user configuration file, overrides systemwide default; see
+.BR complearn (5)
+for further details.
+.SH ENVIRONMENT
+none
+.SH DIAGNOSTICS
+If any of the files cannot be read, an error will be printed and the program exits with a nonzero exit code.
+.SH "SEE ALSO"
+.BR complearn (5),
+.BR ncd (1)

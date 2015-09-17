@@ -1,0 +1,13 @@
+Mon, 05 Jun 2006 20:13:57 +0200
+
+QSearch
+
+QSearch is a library for finding unrooted binary trees using the quartet
+tree method.  It is documented online in several papers by
+Cilibrasi and Vitanyi.
+
+Written by Rudi Cilibrasi <cilibrar@cilibrar.com> with help from many others.
+
+First public Debian release
+----------------------------------
+

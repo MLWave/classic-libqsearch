@@ -1,0 +1,228 @@
+requires 2.0.0
+%headertop{
+#include <glib.h>
+#include <libintl.h>
+#include <complearn.h>
+#include "qsearch.h"
+
+#ifndef __MAKETREERESULT_H
+#define __MAKETREERESULT_H
+struct _MakeTreeResult {
+  QSearchTreeMaster *tm;
+  LabeledMatrix *mat;
+  QLabeledTree *tree;
+};
+
+typedef struct _MakeTreeResult MakeTreeResult;
+#endif
+
+%}
+
+%{
+/*
+Copyright (c) 2003-2008 Rudi Cilibrasi, Rulers of the RHouse
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions
+are met:
+1. Redistributions of source code must retain the above copyright
+   notice, this list of conditions and the following disclaimer.
+2. Redistributions in binary form must reproduce the above copyright
+   notice, this list of conditions and the following disclaimer in the
+   documentation and/or other materials provided with the distribution.
+3. Neither the name of the University nor the names of its contributors
+   may be used to endorse or promote products derived from this software
+   without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE RULERS AND CONTRIBUTORS ``AS IS'' AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED.  IN NO EVENT SHALL THE RULERS OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+SUCH DAMAGE.
+*/
+#include <stdio.h>
+#define _( O ) gettext( O )
+#include "qsearch.h"
+#include "qsearch-maketree-private.h"
+
+static QSearchMakeTree *qsmaketree;
+
+gboolean is_asymmetric(gsl_matrix *dm)
+{
+  int i, j;
+  if (dm->size1 != dm->size2)
+    return TRUE;
+  for (i = 0; i < dm->size1; i += 1)
+    for (j = i+1; j < dm->size2; j += 1)
+      if (gsl_matrix_get(dm,i,j) != gsl_matrix_get(dm,j,i))
+        return TRUE;
+  return FALSE;
+}
+
+void tree_search_started(gsl_matrix *dm, void *user_data)
+{
+}
+
+void tried_to_improve(gsl_matrix *dm, QSearchTree *old,
+                      QSearchTree *improved, void *user_data)
+{
+  MakeTreeResult *mtr = (MakeTreeResult *) user_data;
+  if (improved) {
+    printf("%f   (lmsd=%e)\n", qsearch_tree_score_tree(improved, dm), qsearch_treemaster_get_lmsd(mtr->tm));
+    mtr->tree = qsearch_tree_add_labels(improved, mtr->mat);
+    qsearch_maketree_write_tree_file(mtr);
+    qsearch_labeledtree_free(mtr->tree);
+  }
+}
+
+  void tree_search_done(gsl_matrix *dm, QSearchTree *final,
+                           void *user_data)
+{
+  MakeTreeResult *mtr = (MakeTreeResult *) user_data;
+  printf("%f\n", qsearch_tree_score_tree(final, dm));
+  mtr->tree = qsearch_tree_add_labels(final, mtr->mat);
+  qsearch_maketree_write_tree_file(mtr);
+  qsearch_labeledtree_free(mtr->tree);
+}
+
+%}
+class QSearch:MakeTree from G:Object
+{
+  private char *matrix_filename;
+  private gboolean output_nexus;
+  property BOOLEAN output_nexus
+                      (nick = _("output-nexus"),
+                       blurb=_("flag indicating whether to use Nexus output format"),
+                       default_value = FALSE,
+                       flags = CONSTRUCT,
+                       link,
+                       export);
+  private gboolean dot_show_ring;
+  property BOOLEAN dot_show_ring
+                      (nick = _("dot-show-ring"),
+                       blurb=_("show dotted-line perimeter ring for dot tree"),
+                       default_value = TRUE,
+                       flags = CONSTRUCT,
+                       link,
+                       export);
+  private gboolean dot_show_details;
+  property BOOLEAN dot_show_details
+                      (nick = _("dot-show-details"),
+                       blurb = _("show various extra data in dot output"),
+                       default_value = TRUE,
+                       flags = CONSTRUCT,
+                       link,
+                       export);
+  private gchar *filestem;
+  property STRING filestem
+                      (nick = _("filestem"),
+                       blurb = _("initial part of output filename without extension"),
+                       default_value = _("treefile"),
+                       flags = CONSTRUCT,
+                       link,
+                       export);
+  private gchar *dot_title;
+  property STRING dot_title
+                      (nick = _("dot-title"),
+                       blurb = _("title for the output .dot tree file"),
+                       default_value = _("tree"),
+                       flags = CONSTRUCT,
+                       link,
+                       export);
+  public G:Object *
+  new(void) {
+    GObject *ret = (GObject *) GET_NEW;
+    qsmaketree = QSEARCH_MAKETREE(ret);
+    qsmaketree->_priv->matrix_filename = NULL;
+    return G_OBJECT (ret);
+  }
+  public QSearch:MakeTree *
+  top(void) {
+  if (qsmaketree == NULL)
+    qsearch_maketree_new();
+  g_assert(qsmaketree != 0);
+  return qsmaketree;
+  }
+  public MakeTreeResult *
+  process_options(char **argv) {
+    gsl_matrix *dm;
+    LabeledMatrix *lm;
+    GString *matstr = NULL;
+    char **cur;
+    QSearchMakeTree *qsmt = qsearch_maketree_top();
+    for (cur = argv+1; *cur; cur += 1) {
+      if (strcmp(*cur, "-o") == 0) {
+        if (cur[1] == NULL)
+          g_error("-o requires an argument");
+        qsearch_maketree_set_filestem(qsearch_maketree_top(), cur[1]);
+        cur += 1;
+        continue;
+      }
+      if (strcmp(*cur, "-v") == 0 || strcmp(*cur, "--version") == 0) {
+        printf("%s\n", qsearch_package_version);
+        exit(0);
+      }
+      if (strcmp(*cur, "-n") == 0) {
+        qsearch_maketree_set_output_nexus(qsearch_maketree_top(), TRUE);
+        continue;
+      }
+      if (qsmt->_priv->matrix_filename == NULL) {
+        qsmt->_priv->matrix_filename = *cur;
+        continue;
+    }
+    g_error("Unrecognized argument: %s", *cur);
+  }
+  if (qsmt->_priv->matrix_filename == NULL)
+    qsearch_maketree_print_help_and_exit();
+  matstr = complearn_read_whole_file(qsmt->_priv->matrix_filename);
+  lm = complearn_load_any_matrix(matstr);
+  dm = lm->mat;
+  if (dm->size1 != dm->size2)
+    g_error(_("Must have square distance matrix as input."));
+  if (is_asymmetric(dm)) {
+    fprintf(stderr, _("Warning, averaging asymmetric matrix.\n"));
+    lm->mat = complearn_average_matrix(dm);
+    gsl_matrix_free(dm);
+    dm = lm->mat;
+  }
+  printf(_("Starting search on matrix size %d.\n"), dm->size1);
+  QSearchTreeMaster *cltm = qsearch_treemaster_new(dm);
+  MakeTreeResult *mtr = calloc(sizeof(*mtr), 1);
+  mtr->mat = lm;
+  mtr->tm = cltm;
+  qsearch_treemaster_add_observer(cltm, tree_search_started,
+      tried_to_improve, tree_search_done, mtr);
+  qsearch_treemaster_find_best_tree(cltm);
+  return mtr;
+  }
+  public void write_tree_file(const MakeTreeResult *mtr) {
+  gboolean do_nexus = qsearch_maketree_get_output_nexus(qsearch_maketree_top());
+  if (do_nexus) {
+    char *fname = g_strdup_printf("%s.nex", qsearch_maketree_get_filestem(qsearch_maketree_top()));
+    char *nex_str = qsearch_tree_to_nexus_full(mtr->tree, mtr->mat);
+    GString *gf = g_string_new(nex_str);
+    complearn_write_file(fname, gf);
+    g_string_free(gf, TRUE);
+    g_free(nex_str);
+  }
+  else {
+    char *fname = g_strdup_printf("%s.dot", qsearch_maketree_get_filestem(qsearch_maketree_top()));
+    complearn_write_file(fname, qsearch_tree_to_dot(mtr->tree));
+  }
+  }
+public void print_help_and_exit(void) {
+  fprintf(stderr, "Usage:\n\n");
+  fprintf(stderr, "maketree [-v] [-n] <distmatrix>\n");
+  fprintf(stderr, "          -v  print version\n");
+  fprintf(stderr, "          -n  nexus instead of dot output format\n");
+  exit(0);
+}
+
+}

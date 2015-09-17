@@ -1,0 +1,19 @@
+2008-02-18  Rudi Cilibrasi <cilibrar@cilibrar.com>
+
+	* Added matrix averaging, fixing bug with new ncd output.
+
+2007-11-01  Rudi Cilibrasi <cilibrar@cilibrar.com>
+
+	* Fixed bug in 64-bit tree search.
+	* Released version 1.0.5.
+
+2007-09-29  Rudi Cilibrasi <cilibrar@cilibrar.com>
+
+	* Added OpenMP support for multi-core CPU's.
+	* Added incredible new O(n^3) speedup algorithm thanks to Maarten Keijzer.
+	* Released version 1.0.3.
+
+2007-04-26  Rudi Cilibrasi <cilibrar@cilibrar.com>
+
+	* Finally converted to glib GObject.  Now cleaner and more powerful.
+
